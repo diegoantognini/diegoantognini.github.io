@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Česky — Smart Flashcards</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e0e10;--card:#1f1f26;--border:#2e2e3a;--accent:#e8c96d;--accent2:#7eb8f7;--text:#f0eff5;--muted:#7a7a90;--ok:#5fcf8a;--bad:#f07070;--warn:#f0a050;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:24px 16px 60px;background-image:radial-gradient(ellipse at 20% 0%,rgba(126,184,247,.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(232,201,109,.05) 0%,transparent 50%);}
+.hdr{width:100%;max-width:720px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap;}
+.hdr h1{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4vw,2.2rem);color:var(--accent);}
+.hdr-r{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.chips{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{padding:3px 10px;border-radius:100px;font-family:'DM Mono',monospace;font-size:.7rem;border:1px solid;}
+.chip-due{background:rgba(240,112,112,.12);border-color:rgba(240,112,112,.4);color:var(--bad);}
+.chip-new{background:rgba(126,184,247,.12);border-color:rgba(126,184,247,.4);color:var(--accent2);}
+.chip-done{background:rgba(95,207,138,.1);border-color:rgba(95,207,138,.3);color:var(--ok);}
+.reset-btn{padding:3px 10px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.7rem;font-family:'DM Mono',monospace;cursor:pointer;}
+.reset-btn:hover{border-color:var(--bad);color:var(--bad);}
+.tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.tab{padding:6px 16px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.85rem;cursor:pointer;transition:all .15s;}
+.tab.active{background:var(--accent);color:#111;border-color:var(--accent);font-weight:500;}
+.tab:hover:not(.active){border-color:var(--accent);color:var(--accent);}
+.dir-row{display:flex;gap:6px;margin-bottom:12px;align-items:center;flex-wrap:wrap;}
+.dir-label{font-size:.75rem;color:var(--muted);font-family:'DM Mono',monospace;}
+.dir-btn{padding:4px 12px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.75rem;cursor:pointer;transition:all .15s;}
+.dir-btn.active{background:rgba(126,184,247,.12);border-color:rgba(126,184,247,.4);color:var(--accent2);}
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;max-width:720px;width:100%;}
+.filter-btn{padding:4px 12px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.75rem;cursor:pointer;transition:all .15s;}
+.filter-btn.active{background:rgba(126,184,247,.12);border-color:rgba(126,184,247,.4);color:var(--accent2);}
+.prog-row{width:100%;max-width:720px;display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.prog-bar{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width .3s;}
+.prog-lbl{font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted);white-space:nowrap;}
+.card-wrap{width:100%;max-width:720px;perspective:1000px;cursor:pointer;margin-bottom:14px;}
+.card-inner{position:relative;width:100%;min-height:220px;transform-style:preserve-3d;transition:transform .5s cubic-bezier(.4,0,.2,1);}
+.card-inner.flipped{transform:rotateY(180deg);}
+.card-face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--card);border:1px solid var(--border);border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;min-height:220px;}
+.card-back{transform:rotateY(180deg);background:linear-gradient(135deg,#1f2035,#1a1f2e);border-color:#2e3655;}
+.card-lbl{font-family:'DM Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--muted);margin-bottom:12px;}
+.card-word{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,4.5vw,2.6rem);color:var(--text);line-height:1.2;}
+.card-back .card-word{color:var(--accent);}
+.card-cat{font-size:.82rem;color:var(--muted);margin-top:6px;font-style:italic;}
+.card-grammar{margin-top:12px;padding:3px 12px;border-radius:100px;background:rgba(126,184,247,.12);border:1px solid rgba(126,184,247,.25);font-size:.7rem;color:var(--accent2);font-family:'DM Mono',monospace;}
+.card-hint{position:absolute;bottom:14px;font-size:.7rem;color:var(--border);font-family:'DM Mono',monospace;transition:color .2s;}
+.card-wrap:hover .card-hint{color:var(--muted);}
+.card-srs{position:absolute;top:14px;right:16px;font-size:.65rem;font-family:'DM Mono',monospace;padding:2px 8px;border-radius:100px;}
+.srs-new{background:rgba(126,184,247,.15);color:var(--accent2);}
+.srs-due{background:rgba(240,112,112,.15);color:var(--bad);}
+.srs-rep{background:rgba(240,160,80,.15);color:var(--warn);}
+.ans-row{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;width:100%;max-width:720px;margin-bottom:10px;}
+.ans-btn{padding:10px 4px;border-radius:12px;border:1px solid var(--border);background:var(--card);font-size:.82rem;font-weight:500;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .15s;color:var(--text);}
+.ans-btn .ih{font-size:.65rem;font-family:'DM Mono',monospace;font-weight:400;color:var(--muted);}
+.btn-again{border-color:var(--bad);color:var(--bad);}.btn-again:hover{background:rgba(240,112,112,.1);}
+.btn-hard{border-color:var(--warn);color:var(--warn);}.btn-hard:hover{background:rgba(240,160,80,.1);}
+.btn-good{border-color:var(--ok);color:var(--ok);}.btn-good:hover{background:rgba(95,207,138,.1);}
+.btn-easy{border-color:var(--accent);color:var(--accent);}.btn-easy:hover{background:rgba(232,201,109,.1);}
+.skip-btn{display:block;margin:0 auto;padding:8px 18px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.82rem;cursor:pointer;transition:all .15s;}
+.skip-btn:hover{color:var(--text);border-color:#555;}
+.quiz-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:720px;margin-bottom:16px;}
+.quiz-opt{padding:14px 16px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.88rem;cursor:pointer;transition:all .15s;text-align:left;}
+.quiz-opt:hover:not(.disabled){border-color:var(--accent2);color:var(--accent2);}
+.quiz-opt.correct-opt{border-color:var(--ok)!important;background:rgba(95,207,138,.1)!important;color:var(--ok)!important;}
+.quiz-opt.wrong-opt{border-color:var(--bad)!important;background:rgba(240,112,112,.08)!important;color:var(--bad)!important;}
+.quiz-opt.disabled{cursor:default;}
+.ss{display:flex;gap:18px;width:100%;max-width:720px;justify-content:center;margin-top:10px;flex-wrap:wrap;}
+.ss-stat{display:flex;flex-direction:column;align-items:center;gap:1px;}
+.ss-val{font-family:'Playfair Display',serif;font-size:1.4rem;}
+.ss-lbl{font-size:.65rem;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px;}
+.search-wrap{width:100%;max-width:720px;margin-bottom:12px;position:relative;}
+.search-wrap input{width:100%;padding:10px 14px 10px 36px;border-radius:12px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:.88rem;outline:none;transition:border-color .2s;font-family:'DM Sans',sans-serif;}
+.search-wrap input:focus{border-color:var(--accent2);}
+.search-wrap input::placeholder{color:var(--muted);}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;}
+.list-area{width:100%;max-width:720px;display:flex;flex-direction:column;gap:2px;}
+.list-cat-hdr{padding:14px 12px 4px;font-family:'DM Mono',monospace;font-size:.65rem;text-transform:uppercase;letter-spacing:2px;color:var(--muted);border-top:1px solid var(--border);margin-top:4px;}
+.list-cat-hdr:first-child{border-top:none;margin-top:0;}
+.list-item{display:flex;align-items:center;padding:8px 12px;border-radius:10px;border:1px solid transparent;gap:10px;transition:all .12s;}
+.list-item:hover{background:var(--card);border-color:var(--border);}
+.list-cz{font-size:.92rem;font-weight:500;min-width:150px;}
+.list-en{color:var(--muted);font-size:.85rem;flex:1;}
+.list-grammar-tag{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--accent2);background:rgba(126,184,247,.1);padding:2px 7px;border-radius:100px;white-space:nowrap;}
+.list-srs-tag{font-family:'DM Mono',monospace;font-size:.65rem;padding:2px 7px;border-radius:100px;white-space:nowrap;}
+.tag-new{color:var(--accent2);background:rgba(126,184,247,.1);}
+.tag-due{color:var(--bad);background:rgba(240,112,112,.1);}
+.tag-ok{color:var(--ok);background:rgba(95,207,138,.08);}
+.done-screen{width:100%;max-width:720px;text-align:center;padding:2.5rem 1rem;}
+.done-screen h2{font-family:'Playfair Display',serif;font-size:2rem;color:var(--accent);margin-bottom:8px;}
+.done-screen p{color:var(--muted);font-size:.88rem;margin-bottom:1.5rem;line-height:1.6;}
+.done-stats{display:flex;gap:24px;justify-content:center;margin-bottom:1.5rem;flex-wrap:wrap;}
+.done-stat .val{font-family:'Playfair Display',serif;font-size:2rem;}
+.done-stat .lbl{font-size:.65rem;color:var(--muted);font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px;}
+.done-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.btn-primary{padding:10px 24px;border-radius:12px;border:none;background:var(--accent);color:#111;font-size:.9rem;font-weight:500;cursor:pointer;}
+.btn-primary:hover{opacity:.85;}
+.btn-secondary{padding:10px 24px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.9rem;cursor:pointer;}
+.hidden{display:none!important;}
+@keyframes fu{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.fu{animation:fu .22s ease both;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <h1>Česky</h1>
+  <div class="hdr-r">
+    <div class="chips">
+      <div class="chip chip-due">Due: <span id="n-due">0</span></div>
+      <div class="chip chip-new">New: <span id="n-new">0</span></div>
+      <div class="chip chip-done">Done: <span id="n-done">0</span></div>
+    </div>
+    <button class="reset-btn" onclick="confirmReset()">↺ reset</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="setMode('flash')">Flashcards</button>
+  <button class="tab" onclick="setMode('quiz')">Quiz</button>
+  <button class="tab" onclick="setMode('list')">Browse</button>
+</div>
+
+<div class="dir-row" id="dir-row">
+  <span class="dir-label">direction:</span>
+  <button class="dir-btn active" onclick="setDir('cz')">🇨🇿 Czech to English</button>
+  <button class="dir-btn" onclick="setDir('en')">🇬🇧 English to Czech</button>
+</div>
+
+<div class="filters" id="filters"></div>
+
+<div class="prog-row" id="prog-row">
+  <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
+  <div class="prog-lbl" id="prog-lbl">0 / 0</div>
+</div>
+
+<div class="search-wrap hidden" id="search-wrap">
+  <span class="search-icon">🔍</span>
+  <input placeholder="Search Czech or English..." oninput="renderList()" id="search-input">
+</div>
+
+<div class="card-wrap hidden" id="card-wrap" onclick="flipCard()">
+  <div class="card-inner" id="card-inner">
+    <div class="card-face">
+      <div class="card-srs" id="srs-badge"></div>
+      <div class="card-lbl" id="front-lbl">Czech</div>
+      <div class="card-word" id="card-front"></div>
+      <div class="card-cat" id="card-cat"></div>
+      <div class="card-hint">tap to flip</div>
+    </div>
+    <div class="card-face card-back">
+      <div class="card-lbl" id="back-lbl">English</div>
+      <div class="card-word" id="card-back-word"></div>
+      <div class="card-grammar" id="card-grammar"></div>
+    </div>
+  </div>
+</div>
+
+<div class="ans-row hidden" id="ans-row">
+  <button class="ans-btn btn-again" onclick="rate(0)">Again<span class="ih" id="h0"></span></button>
+  <button class="ans-btn btn-hard"  onclick="rate(1)">Hard<span class="ih" id="h1"></span></button>
+  <button class="ans-btn btn-good"  onclick="rate(2)">Good<span class="ih" id="h2"></span></button>
+  <button class="ans-btn btn-easy"  onclick="rate(3)">Easy<span class="ih" id="h3"></span></button>
+</div>
+<button class="skip-btn hidden" id="skip-btn" onclick="skipCard()">Skip</button>
+
+<div class="quiz-grid hidden" id="quiz-area"></div>
+<div class="list-area hidden" id="list-area"></div>
+
+<div class="ss hidden" id="session-stats">
+  <div class="ss-stat"><div class="ss-val" style="color:var(--ok)" id="st-good">0</div><div class="ss-lbl">Good/Easy</div></div>
+  <div class="ss-stat"><div class="ss-val" style="color:var(--warn)" id="st-hard">0</div><div class="ss-lbl">Hard</div></div>
+  <div class="ss-stat"><div class="ss-val" style="color:var(--bad)" id="st-again">0</div><div class="ss-lbl">Again</div></div>
+</div>
+
+<div class="done-screen hidden" id="done-screen">
+  <h2>Session complete! 🎉</h2>
+  <p id="done-msg"></p>
+  <div class="done-stats">
+    <div class="done-stat"><div class="val" style="color:var(--ok)" id="ds-good">0</div><div class="lbl">Good/Easy</div></div>
+    <div class="done-stat"><div class="val" style="color:var(--warn)" id="ds-hard">0</div><div class="lbl">Hard</div></div>
+    <div class="done-stat"><div class="val" style="color:var(--bad)" id="ds-again">0</div><div class="lbl">Again</div></div>
+  </div>
+  <div class="done-actions">
+    <button class="btn-primary" onclick="startSession()">Study again</button>
+    <button class="btn-secondary" onclick="setMode('list')">Browse all</button>
+  </div>
+</div>
+
+<script>
+const VOCAB=[
+  {cz:"Dobré ráno",en:"Good morning",cat:"Greetings",g:"TO mladé město"},
+  {cz:"Dobrý den",en:"Good day / Hello",cat:"Greetings",g:"TEN mladý hrad"},
+  {cz:"Dobrý večer",en:"Good evening",cat:"Greetings",g:"TEN mladý hrad"},
+  {cz:"Ahoj / Čau",en:"Hi / Bye",cat:"Greetings",g:null},
+  {cz:"Na shledanou",en:"Goodbye",cat:"Greetings",g:"na mladou"},
+  {cz:"Fajn",en:"Okay / Fine",cat:"Greetings",g:null},
+  {cz:"Jak se máš?",en:"How are you?",cat:"Greetings",g:null},
+  {cz:"Špatně",en:"Poorly / Badly",cat:"Greetings",g:"špatný / horší / nejhorší"},
+  {cz:"Jde to / Ujde to",en:"It's okay / Fair enough",cat:"Greetings",g:"nese to"},
+  {cz:"jméno",en:"name",cat:"Personal",g:"TO město"},
+  {cz:"pohlaví",en:"gender / sex",cat:"Personal",g:"TO stavení"},
+  {cz:"křestní jméno",en:"first name",cat:"Personal",g:"TO jarní město"},
+  {cz:"příjmení",en:"surname",cat:"Personal",g:"TO stavení"},
+  {cz:"adresa",en:"address",cat:"Personal",g:"TA žena"},
+  {cz:"ulice",en:"street",cat:"Personal",g:"TA růže"},
+  {cz:"číslo",en:"number",cat:"Personal",g:"TO město"},
+  {cz:"náměstí",en:"square",cat:"Personal",g:"TO stavení"},
+  {cz:"povolání",en:"occupation",cat:"Personal",g:"stavení"},
+  {cz:"mobil",en:"smartphone",cat:"Personal",g:"hrad"},
+  {cz:"mapa",en:"map",cat:"Personal",g:"žena"},
+  {cz:"skupina",en:"group",cat:"Personal",g:"žena"},
+  {cz:"dvojice",en:"couple",cat:"Personal",g:"růže"},
+  {cz:"lesní ulice",en:"forest street",cat:"Personal",g:"jarní růže"},
+  {cz:"muž",en:"man",cat:"People",g:"muž"},
+  {cz:"žena",en:"woman",cat:"People",g:"žena"},
+  {cz:"student / studentka",en:"student (m/f)",cat:"People",g:"pán / žena"},
+  {cz:"doktor",en:"doctor",cat:"People",g:"pán"},
+  {cz:"manažer",en:"manager",cat:"People",g:"pán"},
+  {cz:"ekonom",en:"economist",cat:"People",g:"pán"},
+  {cz:"učitel",en:"teacher",cat:"People",g:"muž"},
+  {cz:"podnikatel",en:"entrepreneur",cat:"People",g:"muž"},
+  {cz:"prodavač",en:"salesman",cat:"People",g:"muž"},
+  {cz:"sekretářka",en:"secretary",cat:"People",g:"žena"},
+  {cz:"kolega / kolegyně",en:"colleague (m/f)",cat:"People",g:"předseda / růže"},
+  {cz:"servírka",en:"waitress",cat:"People",g:"žena"},
+  {cz:"úředník / úřednice",en:"clerk (m/f)",cat:"People",g:"pán / růže"},
+  {cz:"politik",en:"politician",cat:"People",g:"pán"},
+  {cz:"profesor",en:"professor",cat:"People",g:"pán"},
+  {cz:"právník",en:"attorney",cat:"People",g:"pán"},
+  {cz:"účetní",en:"accountant",cat:"People",g:"jarní (adj.-subst.)"},
+  {cz:"partner / partnerka",en:"partner (m/f)",cat:"Family",g:"pán / žena"},
+  {cz:"teta",en:"aunt",cat:"Family",g:"žena"},
+  {cz:"strýc",en:"uncle",cat:"Family",g:"muž"},
+  {cz:"manžel / manželka",en:"husband / wife",cat:"Family",g:"pán"},
+  {cz:"soused / sousedka",en:"neighbour (m/f)",cat:"Family",g:"pán"},
+  {cz:"přítel / přítelkyně",en:"boyfriend / girlfriend",cat:"Family",g:"muž / růže"},
+  {cz:"kluk",en:"boy",cat:"Family",g:"pán"},
+  {cz:"holka",en:"girl",cat:"Family",g:"žena"},
+  {cz:"chlapec",en:"older boy",cat:"Family",g:"muž"},
+  {cz:"dívka",en:"older girl",cat:"Family",g:"žena"},
+  {cz:"bratranec",en:"cousin (m)",cat:"Family",g:"muž"},
+  {cz:"sestřenice",en:"cousin (f)",cat:"Family",g:"růže"},
+  {cz:"tatínek",en:"father / dad",cat:"Family",g:"pán"},
+  {cz:"babička",en:"grandmother",cat:"Family",g:"žena"},
+  {cz:"dědeček",en:"grandfather",cat:"Family",g:"pán"},
+  {cz:"bratr",en:"brother",cat:"Family",g:"pán"},
+  {cz:"sestra",en:"sister",cat:"Family",g:"žena"},
+  {cz:"syn",en:"son",cat:"Family",g:"pán"},
+  {cz:"dcera",en:"daughter",cat:"Family",g:"žena"},
+  {cz:"víno",en:"wine",cat:"Food & Drink",g:"město"},
+  {cz:"jogurt",en:"yoghurt",cat:"Food & Drink",g:"hrad"},
+  {cz:"voda",en:"water",cat:"Food & Drink",g:"žena"},
+  {cz:"káva",en:"coffee",cat:"Food & Drink",g:"žena"},
+  {cz:"salát",en:"salad",cat:"Food & Drink",g:"hrad"},
+  {cz:"čaj",en:"tea",cat:"Food & Drink",g:"stroj"},
+  {cz:"džus",en:"juice",cat:"Food & Drink",g:"hrad"},
+  {cz:"chleba",en:"bread",cat:"Food & Drink",g:"hrad — chleba bez chlebu"},
+  {cz:"kola",en:"coke",cat:"Food & Drink",g:"žena"},
+  {cz:"maso",en:"meat",cat:"Food & Drink",g:"město"},
+  {cz:"ovoce",en:"fruit",cat:"Food & Drink",g:"moře"},
+  {cz:"pivo",en:"beer",cat:"Food & Drink",g:"město"},
+  {cz:"sůl",en:"salt",cat:"Food & Drink",g:"kost"},
+  {cz:"sýr",en:"cheese",cat:"Food & Drink",g:"les"},
+  {cz:"šunka",en:"ham",cat:"Food & Drink",g:"žena"},
+  {cz:"zelenina",en:"vegetables",cat:"Food & Drink",g:"žena"},
+  {cz:"citron",en:"lemon",cat:"Food & Drink",g:"hrad"},
+  {cz:"čokoláda",en:"chocolate",cat:"Food & Drink",g:"žena"},
+  {cz:"mléko",en:"milk",cat:"Food & Drink",g:"město"},
+  {cz:"židle",en:"chair",cat:"Objects",g:"růže"},
+  {cz:"tabule",en:"whiteboard",cat:"Objects",g:"růže"},
+  {cz:"okno",en:"window",cat:"Objects",g:"město"},
+  {cz:"počítač",en:"computer",cat:"Objects",g:"stroj"},
+  {cz:"stůl",en:"table / desk",cat:"Objects",g:"hrad"},
+  {cz:"formulář",en:"form / document",cat:"Objects",g:"hrad"},
+  {cz:"skříň",en:"cupboard / wardrobe",cat:"Objects",g:"růže"},
+  {cz:"místnost",en:"room",cat:"Objects",g:"kost"},
+  {cz:"kontrola",en:"control / check",cat:"Objects",g:"žena"},
+  {cz:"titul",en:"university degree / title",cat:"Objects",g:"hrad"},
+  {cz:"učebnice",en:"textbook",cat:"Objects",g:"růže"},
+  {cz:"literatura",en:"literature",cat:"Objects",g:"žena"},
+  {cz:"kultura",en:"culture",cat:"Objects",g:"žena"},
+  {cz:"květina",en:"flower",cat:"Objects",g:"žena"},
+  {cz:"nula",en:"zero (0)",cat:"Numbers",g:"žena"},
+  {cz:"jedna",en:"one (1)",cat:"Numbers",g:null},
+  {cz:"dva",en:"two (2)",cat:"Numbers",g:null},
+  {cz:"tři",en:"three (3)",cat:"Numbers",g:null},
+  {cz:"čtyři",en:"four (4)",cat:"Numbers",g:null},
+  {cz:"pět",en:"five (5)",cat:"Numbers",g:null},
+  {cz:"šest",en:"six (6)",cat:"Numbers",g:null},
+  {cz:"sedm",en:"seven (7)",cat:"Numbers",g:null},
+  {cz:"osm",en:"eight (8)",cat:"Numbers",g:null},
+  {cz:"devět",en:"nine (9)",cat:"Numbers",g:null},
+  {cz:"deset",en:"ten (10)",cat:"Numbers",g:null},
+  {cz:"jedenáct",en:"eleven (11)",cat:"Numbers",g:"jeden + náct"},
+  {cz:"sto",en:"one hundred",cat:"Numbers",g:"město"},
+  {cz:"tisíc",en:"one thousand",cat:"Numbers",g:"stroj"},
+  {cz:"milion",en:"million",cat:"Numbers",g:"hrad"},
+  {cz:"miliarda",en:"billion",cat:"Numbers",g:"žena"},
+  {cz:"bilion",en:"trillion",cat:"Numbers",g:"hrad"},
+  {cz:"pracovat",en:"to work",cat:"Verbs",g:"-> kupovat"},
+  {cz:"tancovat",en:"to dance",cat:"Verbs",g:"-> kupovat"},
+  {cz:"lyžovat",en:"to ski",cat:"Verbs",g:"-> kupovat"},
+  {cz:"malovat",en:"to paint",cat:"Verbs",g:"-> kupovat"},
+  {cz:"ukazovat",en:"to show",cat:"Verbs",g:"-> kupovat"},
+  {cz:"opravovat",en:"to repair",cat:"Verbs",g:"-> kupovat"},
+  {cz:"opakovat",en:"to repeat",cat:"Verbs",g:"-> kupovat"},
+  {cz:"hláskovat",en:"to spell",cat:"Verbs",g:"-> kupovat"},
+  {cz:"jmenovat se",en:"to be named",cat:"Verbs",g:"-> kupovat"},
+  {cz:"sportovat",en:"to do sport",cat:"Verbs",g:"-> kupovat"},
+  {cz:"mailovat",en:"to send an email",cat:"Verbs",g:"-> kupovat"},
+  {cz:"relaxovat",en:"to relax",cat:"Verbs",g:"-> kupovat"},
+  {cz:"cestovat",en:"to travel",cat:"Verbs",g:"-> kupovat"},
+  {cz:"studovat",en:"to study",cat:"Verbs",g:"-> kupovat"},
+  {cz:"děkovat",en:"to thank",cat:"Verbs",g:"-> kupovat"},
+  {cz:"chatovat",en:"to chat",cat:"Verbs",g:"-> kupovat"},
+  {cz:"rezervovat",en:"to reserve",cat:"Verbs",g:"-> kupovat"},
+  {cz:"poslouchat",en:"to listen",cat:"Verbs",g:"-> dělat"},
+  {cz:"vybrat",en:"to choose",cat:"Verbs",g:"-> dělat"},
+  {cz:"znamenat",en:"to mean",cat:"Verbs",g:"-> dělat"},
+  {cz:"odpovídat",en:"to respond",cat:"Verbs",g:"-> dělat"},
+  {cz:"odpočívat",en:"to rest",cat:"Verbs",g:"-> dělat"},
+  {cz:"říkat",en:"to say",cat:"Verbs",g:"-> dělat"},
+  {cz:"zpívat",en:"to sing",cat:"Verbs",g:"-> dělat"},
+  {cz:"běhat",en:"to run",cat:"Verbs",g:"-> dělat"},
+  {cz:"objednat",en:"to order",cat:"Verbs",g:"-> dělat"},
+  {cz:"čekat",en:"to wait",cat:"Verbs",g:"-> dělat"},
+  {cz:"dívat se",en:"to look / watch",cat:"Verbs",g:"-> dělat"},
+  {cz:"mít se",en:"to feel (like)",cat:"Verbs",g:"-> dělat"},
+  {cz:"hledat",en:"to search",cat:"Verbs",g:"-> dělat"},
+  {cz:"znát",en:"to know",cat:"Verbs",g:"-> dělat"},
+  {cz:"spěchat",en:"to rush",cat:"Verbs",g:"-> dělat"},
+  {cz:"zajímat se (o)",en:"to be interested in",cat:"Verbs",g:"-> dělat"},
+  {cz:"dát si",en:"to have (a meal)",cat:"Verbs",g:"-> dělat"},
+  {cz:"číst",en:"to read",cat:"Verbs",g:"-> nést"},
+  {cz:"vzít si",en:"to take (once)",cat:"Verbs",g:"-> nést"},
+  {cz:"brát si",en:"to take (habitually)",cat:"Verbs",g:"-> nést"},
+  {cz:"posadit se",en:"to sit down",cat:"Verbs",g:"-> prosit"},
+  {cz:"mluvit",en:"to speak",cat:"Verbs",g:"-> prosit"},
+  {cz:"moderní",en:"modern",cat:"Adjectives",g:"jarní"},
+  {cz:"ošklivý",en:"ugly",cat:"Adjectives",g:"mladý"},
+  {cz:"starý",en:"old",cat:"Adjectives",g:"mladý"},
+  {cz:"nový",en:"new",cat:"Adjectives",g:"mladý"},
+  {cz:"inteligentní",en:"intelligent",cat:"Adjectives",g:"jarní"},
+  {cz:"teplý",en:"warm",cat:"Adjectives",g:"mladý"},
+  {cz:"horký",en:"hot",cat:"Adjectives",g:"mladý"},
+  {cz:"studený",en:"cold",cat:"Adjectives",g:"mladý"},
+  {cz:"špatný",en:"bad",cat:"Adjectives",g:"mladý"},
+  {cz:"drahý",en:"expensive",cat:"Adjectives",g:"mladý"},
+  {cz:"levný",en:"cheap",cat:"Adjectives",g:"mladý"},
+  {cz:"cizí",en:"foreign",cat:"Adjectives",g:"jarní"},
+  {cz:"perlivý",en:"sparkling",cat:"Adjectives",g:"mladý"},
+  {cz:"bílý",en:"white",cat:"Adjectives",g:"mladý"},
+  {cz:"černý",en:"black",cat:"Adjectives",g:"mladý"},
+  {cz:"červený",en:"red",cat:"Adjectives",g:"mladý"},
+  {cz:"neperlivý",en:"still / non-sparkling",cat:"Adjectives",g:"mladý"},
+  {cz:"zeleninový",en:"vegetable (adj.)",cat:"Adjectives",g:"mladý"},
+  {cz:"ovocný",en:"fruity (adj.)",cat:"Adjectives",g:"mladý"},
+  {cz:"čokoládový",en:"chocolate (adj.)",cat:"Adjectives",g:"mladý"},
+  {cz:"francouzský",en:"French (adj.)",cat:"Adjectives",g:"mladý"},
+  {cz:"dobrý",en:"good",cat:"Adjectives",g:"mladý"},
+  {cz:"velký",en:"big",cat:"Adjectives",g:"mladý"},
+  {cz:"hezký",en:"nice / pretty",cat:"Adjectives",g:"mladý"},
+  {cz:"hodný",en:"kind / good-natured",cat:"Adjectives",g:"mladý"},
+  {cz:"milý",en:"kind",cat:"Adjectives",g:"mladý"},
+  {cz:"sympatický",en:"likeable",cat:"Adjectives",g:"mladý"},
+  {cz:"starší",en:"older",cat:"Adjectives",g:"jarní"},
+  {cz:"rozvedený",en:"divorced",cat:"Adjectives",g:"mladý"},
+  {cz:"chytrý",en:"smart",cat:"Adjectives",g:"mladý"},
+  {cz:"Čech / Češka",en:"Czech (m/f)",cat:"Nationalities",g:"mluví česky"},
+  {cz:"Němec / Němka",en:"German (m/f)",cat:"Nationalities",g:"mluví německy"},
+  {cz:"Francouz / Francouzka",en:"French (m/f)",cat:"Nationalities",g:"mluví francouzsky"},
+  {cz:"Rus / Ruska",en:"Russian (m/f)",cat:"Nationalities",g:"mluví rusky"},
+  {cz:"Ukrajinec / Ukrajinka",en:"Ukrainian (m/f)",cat:"Nationalities",g:"mluví ukrajinsky"},
+  {cz:"Američan / Američanka",en:"American (m/f)",cat:"Nationalities",g:"mluví americky"},
+  {cz:"Švéd / Švédka",en:"Swede (m/f)",cat:"Nationalities",g:"mluví švédsky"},
+  {cz:"Číňan / Číňanka",en:"Chinese (m/f)",cat:"Nationalities",g:"mluví čínsky"},
+  {cz:"Japonec / Japonka",en:"Japanese (m/f)",cat:"Nationalities",g:"mluví japonsky"},
+  {cz:"Polák / Polka",en:"Pole (m/f)",cat:"Nationalities",g:"mluví polsky"},
+  {cz:"Slovák / Slovenka",en:"Slovak (m/f)",cat:"Nationalities",g:"mluví slovensky"},
+  {cz:"Ital / Italka",en:"Italian (m/f)",cat:"Nationalities",g:"mluví italsky"},
+  {cz:"Brit / Britka",en:"Brit (m/f)",cat:"Nationalities",g:"mluví britsky"},
+  {cz:"Dán / Dánka",en:"Dane (m/f)",cat:"Nationalities",g:"mluví dánsky"},
+  {cz:"Španěl / Španělka",en:"Spaniard (m/f)",cat:"Nationalities",g:"mluví španělsky"},
+  {cz:"Švýcar / Švýcarka",en:"Swiss (m/f)",cat:"Nationalities",g:"mluví švýcarsky"},
+  {cz:"Egypťan / Egypťanka",en:"Egyptian (m/f)",cat:"Nationalities",g:"mluví arabsky"},
+  {cz:"Kanaďan / Kanaďanka",en:"Canadian (m/f)",cat:"Nationalities",g:"mluví anglicky/francouzsky"},
+  {cz:"Vietnamec / Vietnamka",en:"Vietnamese (m/f)",cat:"Nationalities",g:"mluví vietnamsky"},
+  {cz:"Slovinec / Slovinka",en:"Slovenian (m/f)",cat:"Nationalities",g:"mluví slovinsky"},
+  {cz:"Asiat / Asiatka",en:"Asian (m/f)",cat:"Nationalities",g:null},
+];
+
+const SK='czech_srs_v4',DAY=86400000,NEW_PER=20;
+const CATS=["All",...new Set(VOCAB.map(v=>v.cat))];
+let sDB={},mode='flash',dir='cz',cat='All';
+let queue=[],idx=0,flipped=false,sGood=0,sHard=0,sAgain=0;
+
+function load(){try{return JSON.parse(localStorage.getItem(SK))||{};}catch(e){return{};}}
+function save(){try{localStorage.setItem(SK,JSON.stringify(sDB));}catch(e){}}
+
+function cardDef(){return{interval:0,reps:0,ef:2.5,due:0,lapses:0};}
+function getC(item){if(!sDB[item.cz])sDB[item.cz]=cardDef();return sDB[item.cz];}
+
+function apply(c,rating){
+  const now=Date.now();
+  if(rating===0){
+    c.reps=0;c.interval=1;c.lapses++;
+    c.ef=Math.max(1.3,c.ef-0.2);
+    c.due=now+DAY;
+  } else {
+    c.ef=Math.max(1.3,c.ef+[0,-0.15,0,+0.15][rating]);
+    if(c.reps===0) c.interval=[1,2,4,7][rating];
+    else if(c.reps===1) c.interval=[1,4,8,14][rating];
+    else{
+      const m=[1,1.2,c.ef,c.ef*1.3][rating];
+      c.interval=Math.max(c.interval+1,Math.round(c.interval*m));
+    }
+    c.reps++;
+    c.due=now+Math.round(c.interval*(1+(Math.random()-.5)*.12))*DAY;
+  }
+}
+
+function preview(c,rating){
+  const cl=Object.assign({},c);apply(cl,rating);
+  const d=Math.round((cl.due-Date.now())/DAY);
+  if(d<=0)return'<1d';if(d===1)return'1d';if(d<31)return d+'d';return Math.round(d/30)+'mo';
+}
+function fmtD(d){if(d<=0)return'today';if(d===1)return'1d';if(d<30)return d+'d';return Math.round(d/30)+'mo';}
+
+function filtered(){
+  const seen=new Set();
+  return VOCAB.filter(v=>{
+    if(cat!=='All'&&v.cat!==cat)return false;
+    const k=v.cz+v.en;if(seen.has(k))return false;seen.add(k);return true;
+  });
+}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function front(v){return dir==='cz'?v.cz:v.en;}
+function back(v){return dir==='cz'?v.en:v.cz;}
+function $(id){return document.getElementById(id);}
+function hide(...ids){ids.forEach(id=>$(id).classList.add('hidden'));}
+function show(...ids){ids.forEach(id=>$(id).classList.remove('hidden'));}
+
+function countChips(){
+  const now=Date.now(),tod=new Date();tod.setHours(0,0,0,0);
+  let nD=0,nN=0,nDo=0;
+  filtered().forEach(v=>{const c=getC(v);if(c.reps===0&&c.due===0)nN++;else if(c.due<=now)nD++;if(c.reps>0&&c.due>tod.getTime())nDo++;});
+  $('n-due').textContent=nD;$('n-new').textContent=nN;$('n-done').textContent=nDo;
+}
+
+function buildQueue(){
+  const now=Date.now(),items=filtered(),due=[],newC=[];
+  items.forEach(v=>{const c=getC(v);if(c.reps===0&&c.due===0)newC.push(v);else if(c.due<=now)due.push(v);});
+  due.sort((a,b)=>getC(a).due-getC(b).due);
+  return[...due,...shuffle(newC).slice(0,NEW_PER)];
+}
+
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',['flash','quiz','list'][i]===m));
+  $('dir-row').classList.toggle('hidden',m==='list');
+  hide('done-screen');
+  if(m==='list')showList();else startSession();
+}
+function setDir(d){
+  dir=d;
+  document.querySelectorAll('.dir-btn').forEach((b,i)=>b.classList.toggle('active',['cz','en'][i]===d));
+  startSession();
+}
+function setCat(c){
+  cat=c;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.textContent===c));
+  startSession();
+}
+
+function startSession(){
+  sGood=0;sHard=0;sAgain=0;updateSS();
+  queue=buildQueue();idx=0;flipped=false;
+  hide('done-screen','list-area','search-wrap');
+  show('prog-row','session-stats');
+  if(mode==='flash')renderFlash();else renderQuiz();
+  countChips();
+}
+
+function renderFlash(){
+  hide('quiz-area');show('card-wrap','session-stats');
+  if(idx>=queue.length){showDone();return;}
+  const v=queue[idx],c=getC(v);
+  const badge=$('srs-badge');
+  if(c.reps===0){badge.textContent='new';badge.className='card-srs srs-new';}
+  else if(c.due<=Date.now()){badge.textContent='due';badge.className='card-srs srs-due';}
+  else{badge.textContent='x'+c.reps;badge.className='card-srs srs-rep';}
+  $('front-lbl').textContent=dir==='cz'?'Czech':'English';
+  $('back-lbl').textContent=dir==='cz'?'English':'Czech';
+  $('card-front').textContent=front(v);
+  $('card-cat').textContent=v.cat;
+  $('card-back-word').textContent=back(v);
+  $('card-grammar').textContent=v.g||v.cat;
+  flipped=false;
+  $('card-inner').classList.remove('flipped');
+  hide('ans-row');show('skip-btn');
+  updateProg();animCard();
+}
+
+function flipCard(){
+  if(mode!=='flash'||idx>=queue.length)return;
+  flipped=!flipped;
+  $('card-inner').classList.toggle('flipped',flipped);
+  if(flipped){
+    const c=getC(queue[idx]);
+    [0,1,2,3].forEach(r=>$('h'+r).textContent=preview(c,r));
+    show('ans-row');hide('skip-btn');
+  } else {
+    hide('ans-row');show('skip-btn');
+  }
+}
+
+function rate(rating){
+  if(idx>=queue.length)return;
+  const v=queue[idx],c=getC(v);
+  apply(c,rating);save();
+  if(rating===0){sAgain++;queue.splice(Math.min(idx+3,queue.length),0,v);}
+  else if(rating===1)sHard++;
+  else sGood++;
+  updateSS();idx++;updateProg();
+  if(idx>=queue.length){showDone();return;}
+  animCard();renderFlash();
+}
+
+function skipCard(){
+  idx++;updateProg();
+  if(idx>=queue.length){showDone();return;}
+  animCard();renderFlash();
+}
+
+function renderQuiz(){
+  show('card-wrap');hide('ans-row','skip-btn');
+  const area=$('quiz-area');area.classList.remove('hidden');area.innerHTML='';
+  if(idx>=queue.length){showDone();return;}
+  const v=queue[idx],c=getC(v),ans=back(v);
+  const pool=VOCAB.filter(x=>(dir==='cz'?x.en:x.cz)!==ans);
+  const opts=shuffle([ans,...shuffle(pool).slice(0,3).map(x=>dir==='cz'?x.en:x.cz)]);
+  const badge=$('srs-badge');
+  badge.textContent=c.reps===0?'new':'x'+c.reps;
+  badge.className='card-srs '+(c.reps===0?'srs-new':'srs-rep');
+  $('front-lbl').textContent=dir==='cz'?'Czech':'English';
+  $('card-front').textContent=front(v);$('card-cat').textContent=v.cat;
+  $('card-inner').classList.remove('flipped');
+  updateProg();animCard();
+  opts.forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.className='quiz-opt';btn.textContent=opt;
+    btn.onclick=()=>{
+      if(btn.classList.contains('disabled'))return;
+      area.querySelectorAll('.quiz-opt').forEach(b=>b.classList.add('disabled'));
+      const ok=opt===ans;
+      btn.classList.add(ok?'correct-opt':'wrong-opt');
+      if(!ok)area.querySelectorAll('.quiz-opt').forEach(b=>{if(b.textContent===ans)b.classList.add('correct-opt');});
+      apply(c,ok?2:0);save();
+      if(ok)sGood++;else{sAgain++;queue.splice(Math.min(idx+3,queue.length),0,v);}
+      updateSS();
+      setTimeout(()=>{idx++;updateProg();if(idx>=queue.length){showDone();return;}renderQuiz();},900);
+    };
+    area.appendChild(btn);
+  });
+}
+
+function showList(){
+  hide('card-wrap','ans-row','skip-btn','quiz-area','done-screen','prog-row','session-stats');
+  show('search-wrap','list-area');renderList();
+}
+
+function renderList(){
+  const q=($('search-input').value||'').toLowerCase(),now=Date.now();
+  let items=filtered();
+  if(q)items=items.filter(v=>v.cz.toLowerCase().includes(q)||v.en.toLowerCase().includes(q));
+  const area=$('list-area');area.innerHTML='';
+  const grouped={};
+  items.forEach(v=>{if(!grouped[v.cat])grouped[v.cat]=[];grouped[v.cat].push(v);});
+  Object.entries(grouped).forEach(([c,words])=>{
+    const h=document.createElement('div');h.className='list-cat-hdr';h.textContent=c;area.appendChild(h);
+    words.forEach((v,i)=>{
+      const cd=getC(v);
+      let cls='tag-new',lbl='new';
+      if(cd.reps>0){if(cd.due<=now){cls='tag-due';lbl='due';}else{cls='tag-ok';lbl=fmtD(Math.round((cd.due-now)/DAY));}}
+      const d=document.createElement('div');d.className='list-item';
+      d.innerHTML=`<div class="list-cz">${v.cz}</div><div class="list-en">${v.en}</div>${v.g?`<div class="list-grammar-tag">${v.g}</div>`:''}<div class="list-srs-tag ${cls}">${lbl}</div>`;
+      area.appendChild(d);
+    });
+  });
+}
+
+function showDone(){
+  countChips();
+  hide('card-wrap','ans-row','skip-btn','quiz-area','session-stats','prog-row');
+  const t=sGood+sHard+sAgain;
+  $('done-msg').textContent=`You reviewed ${t} card${t!==1?'s':''}. Easy and Good cards return in days to weeks — Again cards come back sooner.`;
+  $('ds-good').textContent=sGood;$('ds-hard').textContent=sHard;$('ds-again').textContent=sAgain;
+  show('done-screen');
+}
+
+function updateProg(){
+  $('prog-fill').style.width=(queue.length?idx/queue.length*100:0)+'%';
+  $('prog-lbl').textContent=idx+' / '+queue.length;
+}
+function updateSS(){$('st-good').textContent=sGood;$('st-hard').textContent=sHard;$('st-again').textContent=sAgain;}
+function animCard(){const w=$('card-wrap');w.classList.remove('fu');void w.offsetWidth;w.classList.add('fu');}
+function confirmReset(){if(confirm('Reset all SRS progress?')){sDB={};save();startSession();countChips();}}
+
+const fw=$('filters');
+CATS.forEach(c=>{
+  const b=document.createElement('button');
+  b.className='filter-btn'+(c==='All'?' active':'');
+  b.textContent=c;b.onclick=()=>setCat(c);fw.appendChild(b);
+});
+
+sDB=load();
+countChips();
+startSession();
+</script>
+</body>
+</html>
